@@ -1,0 +1,60 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on tags like v1.0.0, v2.1.3, etc.
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Get version from tag (remove 'v' prefix)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          
+      - name: Create version file
+        run: |
+          # Create file with version information
+          echo "Version: ${{ steps.version.outputs.version }}" > version.txt
+          echo "Tag: ${{ steps.version.outputs.tag }}" >> version.txt
+          echo "Build Date: $(date)" >> version.txt
+          echo "Commit: ${GITHUB_SHA}" >> version.txt
+          
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## Changes in ${{ github.ref_name }}
+            
+            Automatically created release for version ${{ steps.version.outputs.version }}
+            
+            ### Build Information
+            - Version: ${{ steps.version.outputs.version }}
+            - Commit: ${{ github.sha }}
+            - Build Date: ${{ github.event.head_commit.timestamp }}
+          draft: false
+          prerelease: false
+          
+      - name: Upload version file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./version.txt
+          asset_name: version.txt
+          asset_content_type: text/plain
