@@ -41,7 +41,7 @@ jobs:
             ### Build Information
             - Version: ${{ steps.version.outputs.version }}
             - Commit: ${{ github.sha }}
-            - Build Date: $(date)
+            - Build Date: ${{ github.event.head_commit.timestamp }}
           files: version.txt
           draft: false
           prerelease: false
